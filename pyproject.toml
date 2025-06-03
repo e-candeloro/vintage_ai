@@ -1,0 +1,24 @@
+[project]
+name = "vintage-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[standard]>=0.115.12",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.3",
+    "pandas>=2.2.3",
+    "python-dotenv>=1.1.0",
+    "scikit-learn>=1.6.1",
+    "seaborn>=0.13.2",
+    "streamlit>=1.45.1",
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+    "transformers>=4.52.4",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+]
