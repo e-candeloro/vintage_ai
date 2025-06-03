@@ -1,5 +1,42 @@
 # Vintage AI - MVA Hackaton 2025
 
+## Summary
+
+### 🚗 Hackathon Challenge
+Develop a sentiment and theme identification tool for **classic car models** using online data from:
+- Social media (e.g., Instagram, Facebook)
+- Enthusiast forums (e.g., FerrariChat, PorscheMania)
+- Industry articles
+
+### Tool Requirements
+- **Sentiment Analysis:** Score from -1 to +1 over the past 6 months
+- **Theme Extraction:** Identify community discussion topics and their impact on perceived car valuation
+- **(Optional)** Predict 6-month future valuation using provided historical datasets
+
+---
+
+### 📊 Data Access
+- Historical valuations for 5–10 car models from AssetClassic
+- Curated TikTok database: anonymized content metrics, engagement trends
+
+---
+
+### 🧠 Event Phases
+1. **Briefing:** Intro to challenge and datasets  
+2. **Ideation:** Brainstorming and strategy planning  
+3. **Development:** Build solution with mentor support  
+4. **Final Pitch:** Present to panel of judges
+
+---
+
+## 🏆 Evaluation Criteria (Weight)
+- **Technical Innovation** (20%)
+- **Accuracy & Reliability** (20%)
+- **Usability & UX/UI** (20%)
+- **Scalability & Performance** (20%)
+- **Business Relevance** (10%)
+- **Presentation & Clarity** (10%)
+
 ## Installation
 
 1. Install uv globally
@@ -19,6 +56,9 @@
 
         pre-commit install
         pre-commit run --all-files
+
+## Useful Links
+- [Miro Board for the Team](https://miro.com/app/board/uXjVIvxhP5Y=/)
 
 ## Repo idea/Architecture from ChatGPT (template)
 ```
