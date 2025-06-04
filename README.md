@@ -57,6 +57,18 @@ Develop a sentiment and theme identification tool for **classic car models** usi
         pre-commit install
         pre-commit run --all-files
 
+6. Rename the `.env.example` to `.env`. Inside this file there will be important environment settings for the program to use.  
+
+7. Run the backend
+   
+        PYTHONPATH=src uvicorn vintage_ai.api.main:app --reload
+
+8. Open a new shell an run the streamlit front-end:
+
+        streamlit run dashboard/app.py
+
+This will install all the dependencies, spin the FastAPI backend at `http://127.0.0.1:8000` and start the Streamlit dashboard at ` http://localhost:8501`
+
 ## Useful Links
 - [Miro Board for the Team](https://miro.com/app/board/uXjVIvxhP5Y=/)
 
