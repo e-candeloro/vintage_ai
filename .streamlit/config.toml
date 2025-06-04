@@ -1,0 +1,9 @@
+# .streamlit/config.toml  ── production-friendly defaults
+[server]
+headless       = true          # don’t try to open a browser on the server
+address        = "0.0.0.0"     # listen on all interfaces
+port           = 8501          # override with CLI flag or env if PaaS sets $PORT
+enableCORS     = false         # Streamlit only serves HTML/JS; CORS is handled by FastAPI
+enableXsrfProtection = true    # keep CSRF protection on
+# If you’ll put Streamlit behind a reverse-proxy sub-path, uncomment:
+# baseUrlPath   = "dashboard"  # → the app will live at https: //example.com/dashboard/
