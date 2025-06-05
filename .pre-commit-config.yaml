@@ -16,21 +16,20 @@ repos:
         name: detect-secrets-jupyter
         args: ['--exclude-files', '.*[^i][^p][^y][^n][^b]$', '--exclude-lines', '"(hash|id|image/\\w+)":.*']
 
+  # - repo: https://github.com/PyCQA/isort
+  #   rev: 6.0.1
+  #   hooks:
+  #     - id: isort
+
   - repo: https://github.com/psf/black
     rev: 25.1.0
     hooks:
       - id: black
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 6.0.1
-    hooks:
-      - id: isort
-
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.9.1
     hooks:
       - id: nbqa-black
-      - id: nbqa-isort
       - id: nbqa-pyupgrade
 
   - repo: https://github.com/commitizen-tools/commitizen

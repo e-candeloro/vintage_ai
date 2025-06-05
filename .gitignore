@@ -6,6 +6,8 @@
 # exclude all the data folders and subfolders
 data/*
 
+### Streamlit Frontend ###
+.streamlit/secrets.toml
 
 ### Linux ###
 *~
