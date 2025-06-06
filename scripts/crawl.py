@@ -196,7 +196,7 @@ def crawl(url: str):
 
     args = SimpleNamespace()
     args.chunk_size = 1000
-    args.max_depth = 3
+    args.max_depth = 2
     args.max_concurrent = 10
     args.batch_size = 100
 
