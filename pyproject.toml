@@ -11,6 +11,7 @@ dependencies = [
     "jupyter>=1.1.1",
     "langchain>=0.3.25",
     "langchain-community>=0.3.24",
+    "langchain-huggingface>=0.2.0",
     "langchain-ollama>=0.3.3",
     "langgraph>=0.4.8",
     "matplotlib>=3.10.3",
