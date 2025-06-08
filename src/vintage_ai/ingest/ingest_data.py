@@ -1,20 +1,13 @@
-# src/vintage_ai/services/car_data_service.py
-from __future__ import annotations
-
-import os
 import json
-from datetime import datetime
-from pathlib import Path
-from typing import Callable
-from dotenv import load_dotenv
-from collections import defaultdict
-import numpy as np
 import duckdb
-
+import os
+from datetime import datetime
 from vintage_ai.api.core.schemas.v1 import Metrics, CarSnapshot
+from dotenv import load_dotenv
+import numpy as np
+from collections import defaultdict
 
 load_dotenv()
-
 db_path = os.getenv("DUCKDB_PATH", "data.duckdb")
 
 AGGREGATABLE_FIELDS = {
@@ -29,7 +22,8 @@ AGGREGATABLE_FIELDS = {
 }
 
 
-def aggregate_snapshot(car_id: str) -> CarSnapshot:
+def aggregate_metrics_and_cache(car_id: str) -> CarSnapshot:
+
     with duckdb.connect(db_path) as con:
         rows = con.execute(
             """
@@ -47,12 +41,12 @@ def aggregate_snapshot(car_id: str) -> CarSnapshot:
         if not rows:
             return CarSnapshot(car_id=car_id, metrics=Metrics(), history=[])
 
-        # Load into Metrics objects
+        # Step 1: load into Metrics objects
         metrics_objs: list[Metrics] = [
             Metrics(**json.loads(metrics_json)) for _platform, metrics_json in rows
         ]
 
-        # Aggregate scalar fields by median
+        # Step 2: aggregate scalar fields by median
         agg_data = defaultdict(list)
         for m in metrics_objs:
             for field in AGGREGATABLE_FIELDS:
@@ -64,21 +58,25 @@ def aggregate_snapshot(car_id: str) -> CarSnapshot:
             field: float(np.median(vals)) for field, vals in agg_data.items()
         }
 
-        # Enrich with price/popularity
+        # Step 3: enrich with latest price/popularity
         price_rows = con.execute(
             """
             SELECT metric, value
             FROM car_price_popularity
             WHERE car_id = ?
-              AND ts >= NOW() - INTERVAL 1 YEAR
+            AND ts >= NOW() - INTERVAL 1 YEAR
         """,
             [car_id],
         ).fetchall()
 
-        latest = {f"latest_{metric}": value for metric, value in price_rows}
+        latest = {}
+        for metric, value in price_rows:
+            latest[f"latest_{metric}"] = value
+
+        # Step 4: Compose final Metrics object (non-aggregatable lists excluded for now)
         final_metrics = Metrics(**agg_metrics, **latest)
 
-        # Cache to overall_cache
+        # Step 5: Cache to overall_cache
         con.execute(
             """
             INSERT OR REPLACE INTO overall_cache
@@ -87,15 +85,9 @@ def aggregate_snapshot(car_id: str) -> CarSnapshot:
             [car_id, datetime.utcnow(), final_metrics.model_dump_json()],
         )
 
-        return CarSnapshot(car_id=car_id, metrics=final_metrics, history=[])
-
-
-def has_metrics_for_car(car_id: str) -> bool:
-    with duckdb.connect(db_path, read_only=True) as con:
-        count = con.execute(
-            """
-            SELECT COUNT(*) FROM platform_metrics WHERE car_id = ?
-        """,
-            [car_id],
-        ).fetchone()[0]
-    return count > 0
+        # Step 6: Return as CarSnapshot
+        return CarSnapshot(
+            car_id=car_id,
+            metrics=final_metrics,
+            history=[],  # could populate with earlier snapshots later
+        )
