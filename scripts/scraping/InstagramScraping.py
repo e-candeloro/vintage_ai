@@ -8,8 +8,14 @@ from instagrapi import Client
 from dotenv import load_dotenv
 from typing import Optional
 from pydantic import BaseModel
+from transformers import pipeline
+from tqdm import tqdm
 
 load_dotenv()
+MODEL_PATH = os.getenv(
+    "SENTIMENT_MODEL_PATH", "data/models/sentiment_analysis/tabularisai"
+)
+
 
 n_top = 100
 n_recent = 0
@@ -88,6 +94,7 @@ def scraping(target: str):
             json.dump(posts_data, f, indent=4, ensure_ascii=False)
         print(f"Saved data to {output_file}")
     return posts_data
+
 def _clean(item: dict) -> dict:
     def _i(x):
         try:
@@ -103,6 +110,23 @@ def _clean(item: dict) -> dict:
             comments=comms,
         )
 
+    def _load_pipeline(model_path: str) -> Any:
+        try:
+            pipe = pipeline(
+                "text-classification",
+                model="tabularisai/multilingual-sentiment-analysis",
+            )
+            # Save the model and tokenizer to a local directory
+            pipe.save_pretrained(model_path)
+            # Load the classification pipeline with the specified model
+            pipe = pipeline(
+                "text-classification", model=model_path, tokenizer=model_path
+            )
+        except Exception as e:
+            logging.error("Failed to load sentiment pipeline: %s", e)
+            raise
+        return pipe
+
 
 # --- 1. Login ------------------
 cl = Client()
@@ -115,3 +139,35 @@ clean_data = []
 for post in scrap_data:
     clean_data.append(_clean(post))
 
+
+# Potrebbe dare problemi come ho salvato i commenti, in caso check riga 104, 105 e 109
+pipe = _load_pipeline(MODEL_PATH)
+rows = []
+for rec in tqdm(clean_data, desc="Processing comments for sentiment"):
+    if not rec["comments"]:
+        continue
+    preds = pipe(rec["comments"], batch_size=8, truncation=True)
+    scores = [p["score"] for p in preds]
+    labels = [p["label"].lower() for p in preds]
+    total = len(preds)
+    total_eng = rec["likes"] + rec["shares"] + rec["collections"] + total
+    rows.append(
+        dict(
+            num_comments=total,
+            avg_sentiment_score=sum(scores) / total,
+            most_common_sentiment=Counter(labels).most_common(1)[0][0],
+            likes=rec["likes"],
+            shares=rec["shares"],
+            plays=rec["plays"],
+            collections=rec["collections"],
+            engagement_score=(
+                round((total_eng / rec["plays"]) * 100) if rec["plays"] else 0),
+                overall_sentiment_score=5,  # placeholder
+            )
+        )
+# Non so bene cosa faccia qui sotto
+df = pd.DataFrame(rows)
+med = df.median(numeric_only=True).to_dict()
+med["most_common_sentiment"] = df["most_common_sentiment"].mode().iat[0]
+return Metrics(**med).model_dump()
+print(json.dumps(metrics, indent=2))
