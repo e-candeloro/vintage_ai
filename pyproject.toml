@@ -25,6 +25,7 @@ dependencies = [
     "pyarrow>=20.0.0",
     "pydantic>=2.11.5",
     "pydantic-settings>=2.9.1",
+    "python-dateutil>=2.9.0.post0",
     "python-dotenv>=1.1.0",
     "pytrends>=4.9.2",
     "requests>=2.32.3",
