@@ -74,9 +74,8 @@ def aggregate_snapshot(car_id: str) -> CarSnapshot:
             SELECT ts, metric, value
             FROM car_price_popularity
             WHERE car_id = ?
-              AND ts >= NOW() - INTERVAL 1 YEAR
             ORDER BY ts ASC
-        """,
+            """,
             [car_id],
         ).fetchall()
 
