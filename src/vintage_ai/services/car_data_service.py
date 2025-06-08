@@ -1,129 +1,135 @@
-"""
-Single-responsibility service that
-
-1.  reads the (cached) CSV with prices + popularity
-2.  calculates today’s metrics for a requested car
-3.  **optionally** calls a user-supplied callback when the car is missing
-    (think “trigger a scraper” in phase-2 of the hackathon)
-4.  returns a typed `CarSnapshot` object that the FastAPI router can
-    send back straight away.
-
-Nothing in this file knows about FastAPI, Streamlit, or scraping details.
-"""
-
+# src/vintage_ai/services/car_data_service.py
 from __future__ import annotations
 
 import os
-from datetime import date
-from pathlib import Path
-from typing import Callable, Mapping, Optional
+import json
+import logging
+from datetime import datetime
+from typing import List
+from collections import defaultdict
 
 import numpy as np
-import pandas as pd
-from dotenv import load_dotenv
-from scipy.stats import pearsonr
+import duckdb
 
-from vintage_ai.api.core.schemas.v1 import CarMetric, CarSnapshot
+from vintage_ai.api.core.schemas.v1 import Metrics, CarSnapshot, TimePoint
+from vintage_ai.services.trends_services import fetch_trends_global
+from dotenv import load_dotenv
 
 load_dotenv()
 
-# ----------------------------------------------------------------------
-# Configuration --------------------------------------------------------
-# ----------------------------------------------------------------------
+db_path = os.getenv("DUCKDB_PATH", "data.duckdb")
 
-DATASET_PATH = Path(
-    os.getenv(
-        "DATASET_PATH",
-        "data/processed/asset_classic_car_prices_with_popularity.csv",
-    )
-)
-
-# In phase-2 you might pull these from settings / DI container instead.
-MissingCarCallback = Callable[[str], None]  # (car_name) -> None
-
-# ----------------------------------------------------------------------
-# Internal helpers (never imported elsewhere) --------------------------
-# ----------------------------------------------------------------------
-
-_df_cache: Optional[pd.DataFrame] = None
+AGGREGATABLE_FIELDS = {
+    "num_comments",
+    "avg_sentiment_score",
+    "likes",
+    "shares",
+    "plays",
+    "collections",
+    "engagement_score",
+    "overall_sentiment_score",
+}
 
 
-def _get_df() -> pd.DataFrame:
-    """Read the CSV once per process – cheap and easy for a hackathon."""
-    global _df_cache
-    if _df_cache is None:
-        _df_cache = pd.read_csv(DATASET_PATH)
-    return _df_cache
+def aggregate_snapshot(car_id: str) -> CarSnapshot:
+    # Step 1: Read and aggregate platform metrics
+    with duckdb.connect(db_path) as con:
+        rows = con.execute(
+            """
+            SELECT platform, metrics
+            FROM (
+                SELECT *, ROW_NUMBER() OVER (PARTITION BY platform ORDER BY run_ts DESC) AS rn
+                FROM platform_metrics
+                WHERE car_id = ?
+            )
+            WHERE rn = 1
+            """,
+            [car_id],
+        ).fetchall()
 
+        if not rows:
+            return CarSnapshot(car_id=car_id, metrics=Metrics(), history=[])
 
-def _popularity_metrics(df: pd.DataFrame, car_name: str) -> Mapping[str, float | None]:
-    """
-    Pure maths!  Returns a dict of metric_name -> value (or None on failure)
-    """
-    price_col = car_name.lower()
-    pop_col = f"{car_name}_popularity"
-    cols = df.columns[1:].to_list()  # skip 'year' column
+        # Load into Metrics objects
+        metrics_objs: List[Metrics] = [Metrics(**json.loads(mj)) for _p, mj in rows]
 
-    if price_col not in cols or pop_col not in cols:
-        return {}
+        # Aggregate scalar fields by median
+        agg_data = defaultdict(list)
+        for m in metrics_objs:
+            for field in AGGREGATABLE_FIELDS:
+                value = getattr(m, field)
+                if value is not None:
+                    agg_data[field].append(value)
 
-    sub_df = df[["year", price_col, pop_col]].dropna()
-    if len(sub_df) < 3:
-        return {}
-
-    # Stats
-    price_z = (sub_df[price_col] - sub_df[price_col].mean()) / sub_df[price_col].std()
-    pop_z = (sub_df[pop_col] - sub_df[pop_col].mean()) / sub_df[pop_col].std()
-    r, p = pearsonr(price_z, pop_z)
-
-    momentum = sub_df[pop_col].diff().rolling(3).mean().iloc[-1]
-    if np.isnan(momentum):
-        return {}
-
-    significance_boost = max(0, (1 - min(p, 0.05) / 0.05))
-    predictive = max(0, min(100, momentum * significance_boost * 5))
-
-    return {
-        "current_popularity": int(sub_df[pop_col].iloc[-1]),
-        "correlation_score": round(r * 100, 1),
-        "p_value": round(p, 4),
-        "predictive_score": round(predictive, 1),
-    }
-
-
-# ----------------------------------------------------------------------
-# Public API (imported by FastAPI router) ------------------------------
-# ----------------------------------------------------------------------
-def load_snapshot(
-    car_name: str,
-    *,
-    on_missing: MissingCarCallback | None = None,
-) -> CarSnapshot:
-    """
-    Compute a `CarSnapshot` for *car_name*.
-    - Sanitizes input to lowercase and trims extra spaces.
-    - Returns metrics or default values + optional callback on missing car.
-    """
-    # 🧼 Normalize input to align with sanitized column names
-    car_name = car_name.strip().lower()
-
-    df = _get_df()
-    metric_dict = _popularity_metrics(df, car_name)
-
-    if not metric_dict:
-        if on_missing is not None:
-            try:
-                on_missing(car_name)
-            except Exception:
-                pass  # do not break the app due to scraping logic
-
-        # return a result with empty values
-        metric_dict = {
-            "current_popularity": None,
-            "correlation_score": None,
-            "p_value": None,
-            "predictive_score": None,
+        agg_metrics = {
+            field: float(np.median(vals)) for field, vals in agg_data.items()
         }
 
-    metrics = [CarMetric(metric=k, value=v) for k, v in metric_dict.items()]
-    return CarSnapshot(car_name=car_name, as_of=date.today(), metrics=metrics)
+        # Build price and stored popularity series
+        price_rows = con.execute(
+            """
+            SELECT ts, metric, value
+            FROM car_price_popularity
+            WHERE car_id = ?
+            ORDER BY ts ASC
+            """,
+            [car_id],
+        ).fetchall()
+
+        price_series: List[TimePoint] = []
+        popularity_series: List[TimePoint] = []
+        latest_values: dict[str, float] = {}
+
+        for ts, metric, value in price_rows:
+            point = TimePoint(timestamp=ts, value=value)
+            if metric == "price":
+                price_series.append(point)
+                latest_values["latest_price"] = value
+            elif metric == "popularity":
+                popularity_series.append(point)
+                latest_values["latest_popularity"] = value
+
+    # Step 2: Fetch global popularity via Pytrends
+    try:
+        df_trends = fetch_trends_global(
+            car_id, start_date="2006-01-01", granularity="yearly"
+        )
+        if not df_trends.empty and "Global" in df_trends.columns:
+            popularity_series_trends = [
+                TimePoint(timestamp=ts.to_pydatetime(), value=float(v))
+                for ts, v in df_trends["Global"].items()
+            ]
+        else:
+            popularity_series_trends = []
+    except Exception as err:
+        logging.warning("Trends pull failed for %s: %s", car_id, err)
+        popularity_series_trends = []
+
+    # Step 3: Compose final Metrics (no duplicate keywords)
+    final_metrics = Metrics(
+        **agg_metrics,
+        **latest_values,
+        price_series=price_series or None,
+        popularity_series=popularity_series_trends or popularity_series or None,
+    )
+
+    # Step 4: Cache to overall_cache
+    with duckdb.connect(db_path) as con:
+        con.execute(
+            """
+            INSERT OR REPLACE INTO overall_cache (car_id, run_ts, metrics)
+            VALUES (?, ?, ?)
+            """,
+            [car_id, datetime.utcnow(), final_metrics.model_dump_json()],
+        )
+
+    # Step 5: Return the snapshot
+    return CarSnapshot(car_id=car_id, metrics=final_metrics, history=[])
+
+
+def has_metrics_for_car(car_id: str) -> bool:
+    with duckdb.connect(db_path, read_only=True) as con:
+        count = con.execute(
+            "SELECT COUNT(*) FROM platform_metrics WHERE car_id = ?", [car_id]
+        ).fetchone()[0]
+    return count > 0
