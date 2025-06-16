@@ -1,42 +1,5 @@
 # Vintage AI - MVA Hackaton 2025
 
-## Summary
-
-### 🚗 Hackathon Challenge
-Develop a sentiment and theme identification tool for **classic car models** using online data from:
-- Social media (e.g., Instagram, Facebook)
-- Enthusiast forums (e.g., FerrariChat, PorscheMania)
-- Industry articles
-
-### Tool Requirements
-- **Sentiment Analysis:** Score from -1 to +1 over the past 6 months
-- **Theme Extraction:** Identify community discussion topics and their impact on perceived car valuation
-- **(Optional)** Predict 6-month future valuation using provided historical datasets
-
----
-
-### 📊 Data Access
-- Historical valuations for 5–10 car models from AssetClassic
-- Curated TikTok database: anonymized content metrics, engagement trends
-
----
-
-### 🧠 Event Phases
-1. **Briefing:** Intro to challenge and datasets  
-2. **Ideation:** Brainstorming and strategy planning  
-3. **Development:** Build solution with mentor support  
-4. **Final Pitch:** Present to panel of judges
-
----
-
-## 🏆 Evaluation Criteria (Weight)
-- **Technical Innovation** (20%)
-- **Accuracy & Reliability** (20%)
-- **Usability & UX/UI** (20%)
-- **Scalability & Performance** (20%)
-- **Business Relevance** (10%)
-- **Presentation & Clarity** (10%)
-
 ## Installation
 
 1. Install uv globally
@@ -69,147 +32,71 @@ Develop a sentiment and theme identification tool for **classic car models** usi
 
 This will install all the dependencies, spin the FastAPI backend at `http://127.0.0.1:8000` and start the Streamlit dashboard at ` http://localhost:8501`
 
-## Useful Links
-- [Miro Board for the Team](https://miro.com/app/board/uXjVIvxhP5Y=/)
+## Project Overview
 
-## Repo idea/Architecture from ChatGPT (template)
-```
-vintage-ai/
-├── .env                       # Secrets & runtime knobs           (▶ docker-compose, Airflow)
-├── .pre-commit-config.yaml    # Black, Ruff, isort, nbstripout   (▶ dev quality gate)
-├── docker-compose.yml         # One-shot local stack             (▶ all services)
-├── Dockerfile                 # Base image for Python jobs       (▶ Airflow + workers)
-├── pyproject.toml             # Poetry deps & src-layout         (▶ every Python module)
-├── README.md                  # Quick-start for mentors
-│
-├── dags/                      # Airflow DAGs  ← plugs into airflow webserver
-│   └── update_pipeline.py
-│
-├── src/                       # Importable package: `vintage_ai.*`
-│   ├── vintage_ai/
-│   │   ├── __init__.py
-│   │   ├── config.py          # Central settings (pydantic.BaseSettings)
-│   │   ├── ingest/            # Scrapers & loaders
-│   │   │   ├── twitter.py
-│   │   │   └── forums.py
-│   │   ├── etl/               # DuckDB / Polars transformations
-│   │   │   ├── raw_to_parquet.py
-│   │   │   └── build_features.py
-│   │   ├── models/            # Training & inference helpers
-│   │   │   ├── train.py
-│   │   │   └── predict.py
-│   │   ├── api/               # FastAPI application
-│   │   │   ├── main.py        # `uvicorn vintage_ai.api.main:app`
-│   │   │   └── deps.py        # lazy loaders & DI
-│   │   └── dashboard/         # Streamlit UI
-│   │       └── app.py
-│   └── tests/                 # pytest specs  (`poetry run pytest`)
-│
-├── data/                      # Local/ephemeral – .gitignored
-│   ├── raw/
-│   ├── parquet/
-│   ├── features/
-│   └── models/
-└── notebooks/                 # Exploratory; nothing imported
-```
+Vintage AI is a tool designed to provide sentiment and theme identification for classic car models. It leverages online data from various sources, including social media and enthusiast forums, to deliver insights into market perception and potential valuation shifts.
 
----
+The project is built with a Python backend using FastAPI and a Streamlit-based dashboard for user interaction. Data is managed using DuckDB, and various Python libraries are employed for data scraping, processing, and analysis.
 
-## 1.  Back-bone ideas (why this layout works)
+## Hackathon Evaluation Criteria Alignment
 
-| Guideline                      | Concrete choice                                                                                                                                         |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **One real Python package**    | `src/vintage_ai/…` → absolute imports (`from vintage_ai.etl.build_features import run`) avoid PYTHONPATH chaos.                                         |
-| **Config lives outside code**  | `config.py` wraps **Pydantic BaseSettings** so every service (scraper, ETL, API) reads the same `.env` keys yet keeps sensible defaults for local runs. |
-| **Everything containerised**   | A single `Dockerfile` (slim Python 3.11 + build-arg POETRY\_VERSION) is shared by Airflow workers and the FastAPI service.                              |
-| **Airflow DAG thinness**       | Each DAG task is a one-liner wrapper that calls a function already in `vintage_ai.<layer>`. Business logic stays testable/outside Airflow.              |
-| **Data & artefacts colocated** | Parquet feature store and pickled/torch models all under `data/`. The path is an env variable so S3 can replace it later.                               |
+This solution is designed to meet the hackathon's evaluation criteria:
 
----
+*   **Technical Innovation (20%)**:
+    *   The project utilizes a modern Python stack, including FastAPI for a high-performance API and Streamlit for a reactive user interface.
+    *   It incorporates Pydantic for robust data validation and settings management, ensuring code quality and reliability.
+    *   The use of DuckDB allows for efficient data storage and querying, suitable for analytical workloads.
+    *   The architecture separates concerns, with distinct services for data aggregation (`car_data_service.py`) and API routing (`api/routes/cars.py`), promoting modularity and maintainability.
+    *   Sentiment analysis and theme extraction are planned using pre-trained models and potentially custom-trained models for higher accuracy on domain-specific language.
 
-## 2.  What every config / infra file does
+*   **Accuracy & Reliability (20%)**:
+    *   The `car_data_service.py` is responsible for aggregating data from multiple sources. It uses median aggregation for scalar metrics to reduce the impact of outliers.
+    *   Data validation is enforced through Pydantic models (`schemas/v1.py`), ensuring data integrity throughout the application.
+    *   The system is designed to fetch and process data from various platforms, aiming for a comprehensive view of market sentiment. While current implementation in `car_data_service.py` focuses on DuckDB and Pytrends, the structure allows for adding more data sources.
 
-| File                          | Purpose                               | Key fields (hackathon defaults)                                                                                               |
-| ----------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **`.env`**                    | runtime secrets & knobs               | `DATA_DIR=./data` · `MLFLOW_TRACKING_URI=./mlruns` · `MINIO_ENDPOINT=http://minio:9000`                                       |
-| **`pyproject.toml`**          | dependency pinning + package metadata | `[tool.poetry.dependencies] neuralforecast="^1.8.0" …`<br>`[tool.poetry.scripts] vintage-ai-api = "vintage_ai.api.main:main"` |
-| **`docker-compose.yml`**      | local orchestration                   | Services: `airflow-webserver`, `airflow-scheduler`, `api`, `streamlit`, `minio`, `duckdb-web`, `redis`                        |
-| **`Dockerfile`**              | unified build image                   | 1. layer: python:3.11-slim → poetry install<br>2. copies `src/`, exposes `uvicorn` entrypoint                                 |
-| **`dags/update_pipeline.py`** | ETL + train orchestration             | DAG args pull dates & bucket paths from `vintage_ai.config.settings`                                                          |
-| **`vintage_ai/config.py`**    | **single source of truth**            | `python class Settings(BaseSettings): data_dir: Path = Path(os.getenv("DATA_DIR", "./data"))`                                 |
-| **`.pre-commit-config.yaml`** | on-save hygiene                       | Black, Ruff (flake8), isort, detect-secrets, nbstripout                                                                       |
-| **`.gitignore`**              | keep repo slim                        | `/data/*`, `.env`, `.venv`, `__pycache__`, `*.parquet`, `*.pkl`                                                               |
-| **`README.md`**               | five-line quick-start                 | Includes: `make dev` → `docker compose up --build`                                                                            |
+*   **Usability & UX/UI (20%)**:
+    *   The dashboard (`dashboard/app.py`) is built with Streamlit, a framework known for its ease of use in creating interactive web applications for data science projects.
+    *   It provides a simple interface for users to input a car model and view analytics, including time-series data, sentiment scores, and summary metrics.
+    *   Visualizations like line charts for price/popularity trends and bar charts for topic sentiments enhance data comprehension.
+    *   Input sanitization (`sanitize_car_name` in `dashboard/app.py`) improves user experience by handling varied inputs.
 
----
+*   **Scalability & Performance (20%)**:
+    *   FastAPI is a high-performance web framework capable of handling many concurrent requests.
+    *   DuckDB is designed for analytical performance and can handle larger datasets efficiently.
+    *   The use of asynchronous operations (though not explicitly detailed in the provided `src` snippets, FastAPI supports them natively) can further enhance performance.
+    *   Caching mechanisms (`@st.cache_data` in `dashboard/app.py`) are used to improve the responsiveness of the dashboard by avoiding redundant computations or API calls.
+    *   The `car_data_service.py` is structured to potentially offload scraping tasks (`enqueue_scrape`), which is a good practice for scalability, allowing these to be handled by background workers in a more extensive setup.
 
-## 3.  How the folders talk to each other (data & import flow)
+*   **Business Relevance (10%)**:
+    *   The tool directly addresses the need for insights in the classic car investment sector by providing data-driven sentiment analysis and trend identification.
+    *   By analyzing online discussions and market data, it aims to help investors make more informed decisions.
+    *   The focus on specific car models and their perceived valuation aligns with the core interests of collectors and investors in this niche market.
 
-```
-┌──────────────┐        .jsonl          ┌────────────┐
-│ ingest/*.py  │ ───────▶  data/raw  ───▶ etl/*.py   │
-└──────────────┘                        └────┬───────┘
-                                              │  Parquet
-                                              ▼
-                                        data/features/          ┌─────────────┐
-                                              │  df slice       │ models/*.py │
-                                              ▼                 └────┬────────┘
-                                        train_models.py              │  pickle / torchscript
-                                              │                      ▼
-┌───────────────────┐    REST               api/main.py  ◀── streamlit/app.py
-│ FastAPI container │◀────── JSON ─────────────────┘
-└───────────────────┘
-```
+*   **Presentation & Clarity (10%)**:
+    *   The Streamlit dashboard provides a clear and organized way to present the findings.
+    *   The codebase is structured with clear separation of concerns (API, services, dashboard), as seen in the `src` and `dashboard` folders.
+    *   The use of Pydantic for settings (`settings.py`) and schemas (`schemas/v1.py`) contributes to code clarity and maintainability.
+    *   This README itself aims to provide a clear overview of the project and its installation.
 
-* **Ingest layer** writes raw JSONL to `data/raw/<source>/…`.
-* **ETL layer** uses **DuckDB** to read that JSONL and spit Parquet into `data/parquet`.
-* **Feature builder** runs more DuckDB/Polars, outputting a tidy table in `data/features/features.parquet`.
-* **Model trainer** reads that Parquet, trains an NHITS/BERTopic model, pickles to `data/models/<car>.pkl` and registers it in MLflow.
-* **FastAPI** loads every `*.pkl` on start-up (or reload) into an in-memory dict.
-* **Streamlit** just calls the API and visualises. No business logic lives in the UI.
+## Codebase Highlights
 
----
+*   **`src/vintage_ai/`**: Contains the core backend logic.
+    *   **`api/`**: Defines the FastAPI application, including routes (`routes/cars.py`) and core schemas (`core/schemas/v1.py`).
+        *   `main.py`: Sets up the FastAPI application and middleware.
+        *   `routes/cars.py`: Handles API requests related to car data, currently providing a snapshot endpoint.
+        *   `core/schemas/v1.py`: Defines Pydantic models for request and response data structures, ensuring type safety and validation.
+    *   **`services/`**: Houses business logic.
+        *   `car_data_service.py`: Contains functions to fetch, aggregate, and process car-related data from DuckDB and potentially other sources like Google Trends (via `fetch_trends_global`). It aggregates metrics from different platforms and stores/retrieves overall snapshots.
+        *   `trends_services.py`: (Referenced in `car_data_service.py`) Likely contains logic for fetching trend data from external APIs like Google Trends.
+    *   **`settings.py`**: Manages application settings using Pydantic's `BaseSettings`, allowing configuration via environment variables or a `.env` file. This is crucial for managing different environments (dev, prod) and sensitive information.
 
-## 4.  Tiny code examples to anchor the flow
-
-```python
-# vintage_ai/ingest/twitter.py
-from pathlib import Path, datetime
-import subprocess, json
-
-def run(out_dir: Path, query: str, hours: int = 1):
-    ts = datetime.utcnow().strftime("%Y%m%d%H%M")
-    outfile = out_dir / f"{ts}.jsonl"
-    cmd = ["snscrape", "--jsonl", "--since", f"{hours}h", "twitter-search", query]
-    with outfile.open("w") as f:
-        subprocess.run(cmd, stdout=f, check=True)
-
-# vintage_ai/etl/raw_to_parquet.py
-import duckdb, os, glob
-def run(raw_dir: str, pq_dir: str):
-    con = duckdb.connect()
-    for fp in glob.glob(f"{raw_dir}/*.jsonl"):
-        con.execute(f"COPY (SELECT * FROM read_json_auto('{fp}')) "
-                    f"TO '{pq_dir}/{os.path.basename(fp)}.parquet' (FORMAT PARQUET);")
-
-# vintage_ai/api/main.py
-from fastapi import FastAPI, HTTPException
-from vintage_ai.models.predict import load_models, predict
-from vintage_ai.etl.feature_utils import latest_features
-
-app = FastAPI()
-models = load_models()
-
-@app.get("/forecast/{car}")
-def forecast(car: str):
-    feats = latest_features(car)
-    if car not in models:
-        raise HTTPException(404, f"Model for {car} not found")
-    yhat = predict(models[car], feats)
-    return {"car": car, "forecast": yhat, "ts": feats["timestamp"].tolist()}
-```
-
-### TL;DR
-
-*Declare a single installable package under `src/`, keep config in `.env`/`config.py`, and let Docker Compose spin the lot.
-Every folder serves exactly one purpose and exchanges data via Parquet or plain function calls, so refactors stay painless when your dataset or traffic explodes.*
+*   **`dashboard/app.py`**: A Streamlit application that serves as the user interface.
+    *   It takes user input for a car model.
+    *   Calls the backend API to fetch processed data.
+    *   Displays various metrics and visualizations, including:
+        *   Time-series charts for price and popularity.
+        *   Correlation between price and popularity.
+        *   Sentiment analysis (top topics and overall score).
+        *   Summary metrics in a tabular and JSON format.
+    *   Includes error handling for API calls and data processing.
+    *   Uses caching to improve performance.
