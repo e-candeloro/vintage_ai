@@ -10,10 +10,8 @@
 > 💡 AI-powered tool for understanding classic car market trends and sentiment analysis across the web.
 
 ## 📽️ Demo Video
-[![Watch the demo](https://img.shields.io/badge/▶️%20Watch%20Demo-video-ff0000)](media/vintage_ai_demo.mp4)
 
-
-
+https://github.com/user-attachments/assets/8e5a05c8-4982-44bd-bad1-1282149bc8da
 
 ## 🧠 Project Overview
 
@@ -27,6 +25,14 @@ The project is built with a Python backend using FastAPI and a Streamlit-based d
 | Frontend  | [Streamlit](https://streamlit.io/)                                                      |
 | Storage   | [DuckDB](https://duckdb.org/)                                                           |
 | Dev tools | [uv](https://github.com/astral-sh/uv), [pre-commit](https://pre-commit.com/)            |
+
+## 🎯 Challenge
+
+Vintage AI was created for the [Motor Valley Fest Accelerator Hackathon 2025](https://www.motorvalley.it/motorvalleyfest/eventi/hackathon-motor-valley-fest-2025/), a unique event organized by [AssetClassic](https://www.assetclassic.com) and [Motor Valley Accelerator](https://motorvalleyaccelerator.it), sponsored by [TikTok](https://www.tiktok.com).
+
+The challenge invited students and recent graduates passionate about AI, data science, and vintage cars to develop innovative digital solutions. Teams leveraged provided datasets and open-source tools to uncover hidden insights into market sentiment and trends around classic cars, presenting their projects to a jury including representatives from AssetClassic, Motor Valley Accelerator, TikTok, and [McKinsey & Company](https://www.mckinsey.com).
+
+> 🙏 **Special thanks** to the organizers, sponsors, jury members, and mentors for supporting and facilitating the event.
 
 ## ✅ Hackathon Alignment
 
