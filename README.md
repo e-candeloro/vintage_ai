@@ -1,4 +1,43 @@
-# Vintage AI - MVA Hackaton 2025
+# 🚗 Vintage AI - MVA Hackathon 2025 🧠
+
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?logo=fastapi&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-yellow?logo=duckdb&logoColor=black)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
+![License](https://img.shields.io/github/license/e-candeloro/vintage_ai)
+![Pre-commit](https://img.shields.io/badge/Pre--commit-enabled-green)
+
+> 💡 AI-powered tool for understanding classic car market trends and sentiment analysis across the web.
+
+## 📽️ Demo Video
+[![Watch the demo](https://img.shields.io/badge/▶️%20Watch%20Demo-video-ff0000)](media/vintage_ai_demo.mp4)
+
+
+
+
+## 🧠 Project Overview
+
+Vintage AI scrapes social media, forums and Google Trends to deliver **sentiment analysis** and **topic discovery** on classic-car models.
+
+The project is built with a Python backend using FastAPI and a Streamlit-based dashboard for user interaction. Data is managed using DuckDB, and various Python libraries are employed for data scraping, processing, and analysis.
+
+| Layer     | Tech                                                                                    |
+| --------- | --------------------------------------------------------------------------------------- |
+| Backend   | [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/latest/) |
+| Frontend  | [Streamlit](https://streamlit.io/)                                                      |
+| Storage   | [DuckDB](https://duckdb.org/)                                                           |
+| Dev tools | [uv](https://github.com/astral-sh/uv), [pre-commit](https://pre-commit.com/)            |
+
+## ✅ Hackathon Alignment
+
+This solution is designed to meet the hackathon's evaluation criteria:
+
+* 💡**Technical innovation** – modular Python stack, NLP pipelines  
+* 📈 **Accuracy & reliability** – median aggregation, strict schema validation  
+* 🎨 **Usability & UX** – one-click dashboard, interactive charts  
+* ⚙️ **Scalability & performance** – DuckDB analytics, FastAPI async support, caching  
+* 💼 **Business relevance** – investor-oriented insights for classic-car valuation  
+* 📣 **Presentation & clarity** – clean architecture and documentation
 
 ## Installation
 
@@ -32,53 +71,10 @@
 
 This will install all the dependencies, spin the FastAPI backend at `http://127.0.0.1:8000` and start the Streamlit dashboard at ` http://localhost:8501`
 
-## Project Overview
 
-Vintage AI is a tool designed to provide sentiment and theme identification for classic car models. It leverages online data from various sources, including social media and enthusiast forums, to deliver insights into market perception and potential valuation shifts.
 
-The project is built with a Python backend using FastAPI and a Streamlit-based dashboard for user interaction. Data is managed using DuckDB, and various Python libraries are employed for data scraping, processing, and analysis.
 
-## Hackathon Evaluation Criteria Alignment
-
-This solution is designed to meet the hackathon's evaluation criteria:
-
-*   **Technical Innovation (20%)**:
-    *   The project utilizes a modern Python stack, including FastAPI for a high-performance API and Streamlit for a reactive user interface.
-    *   It incorporates Pydantic for robust data validation and settings management, ensuring code quality and reliability.
-    *   The use of DuckDB allows for efficient data storage and querying, suitable for analytical workloads.
-    *   The architecture separates concerns, with distinct services for data aggregation (`car_data_service.py`) and API routing (`api/routes/cars.py`), promoting modularity and maintainability.
-    *   Sentiment analysis and theme extraction are planned using pre-trained models and potentially custom-trained models for higher accuracy on domain-specific language.
-
-*   **Accuracy & Reliability (20%)**:
-    *   The `car_data_service.py` is responsible for aggregating data from multiple sources. It uses median aggregation for scalar metrics to reduce the impact of outliers.
-    *   Data validation is enforced through Pydantic models (`schemas/v1.py`), ensuring data integrity throughout the application.
-    *   The system is designed to fetch and process data from various platforms, aiming for a comprehensive view of market sentiment. While current implementation in `car_data_service.py` focuses on DuckDB and Pytrends, the structure allows for adding more data sources.
-
-*   **Usability & UX/UI (20%)**:
-    *   The dashboard (`dashboard/app.py`) is built with Streamlit, a framework known for its ease of use in creating interactive web applications for data science projects.
-    *   It provides a simple interface for users to input a car model and view analytics, including time-series data, sentiment scores, and summary metrics.
-    *   Visualizations like line charts for price/popularity trends and bar charts for topic sentiments enhance data comprehension.
-    *   Input sanitization (`sanitize_car_name` in `dashboard/app.py`) improves user experience by handling varied inputs.
-
-*   **Scalability & Performance (20%)**:
-    *   FastAPI is a high-performance web framework capable of handling many concurrent requests.
-    *   DuckDB is designed for analytical performance and can handle larger datasets efficiently.
-    *   The use of asynchronous operations (though not explicitly detailed in the provided `src` snippets, FastAPI supports them natively) can further enhance performance.
-    *   Caching mechanisms (`@st.cache_data` in `dashboard/app.py`) are used to improve the responsiveness of the dashboard by avoiding redundant computations or API calls.
-    *   The `car_data_service.py` is structured to potentially offload scraping tasks (`enqueue_scrape`), which is a good practice for scalability, allowing these to be handled by background workers in a more extensive setup.
-
-*   **Business Relevance (10%)**:
-    *   The tool directly addresses the need for insights in the classic car investment sector by providing data-driven sentiment analysis and trend identification.
-    *   By analyzing online discussions and market data, it aims to help investors make more informed decisions.
-    *   The focus on specific car models and their perceived valuation aligns with the core interests of collectors and investors in this niche market.
-
-*   **Presentation & Clarity (10%)**:
-    *   The Streamlit dashboard provides a clear and organized way to present the findings.
-    *   The codebase is structured with clear separation of concerns (API, services, dashboard), as seen in the `src` and `dashboard` folders.
-    *   The use of Pydantic for settings (`settings.py`) and schemas (`schemas/v1.py`) contributes to code clarity and maintainability.
-    *   This README itself aims to provide a clear overview of the project and its installation.
-
-## Codebase Highlights
+## 🧑‍💻 Codebase Highlights
 
 *   **`src/vintage_ai/`**: Contains the core backend logic.
     *   **`api/`**: Defines the FastAPI application, including routes (`routes/cars.py`) and core schemas (`core/schemas/v1.py`).
